@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-const BOOK_IO_API_ENDPOINT: &str = "https://api.book.io/api/v0/collections";
+const BOOK_IO_COLLECTIONS_API_ENDPOINT: &str = "https://api.book.io/api/v0/collections";
 
 /// Response data structure returned by the book.io collections API endpoint
 #[derive(Deserialize)]
@@ -21,8 +21,9 @@ struct CollectionItem {
     network: String,
 }
 
-async fn get_policies() -> anyhow::Result<String> {
-    let res = reqwest::get(BOOK_IO_API_ENDPOINT).await?;
+/// Fetch the collections object from the book.io collections API endpoint
+async fn get_collections() -> anyhow::Result<String> {
+    let res = reqwest::get(BOOK_IO_COLLECTIONS_API_ENDPOINT).await?;
     log::info!(target: "get_policies", "Status: {}", res.status());
     log::info!(target: "get_policies", "Headers:\n{:#?}", res.headers());
 
@@ -34,9 +35,9 @@ async fn get_policies() -> anyhow::Result<String> {
 
 /// Verifies whether the supplied `policy_id` is a book.io policy ID.
 pub async fn verify_book_io_policy(policy_id: &str) -> anyhow::Result<()> {
-    let policies = get_policies().await?;
+    let collections = get_collections().await?;
 
-    let response: CollectionsResponse = serde_json::from_str(&policies)?;
+    let response: CollectionsResponse = serde_json::from_str(&collections)?;
 
     let _item = response
         .data
