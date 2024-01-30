@@ -28,7 +28,7 @@ async fn get_collections() -> anyhow::Result<String> {
     log::info!(target: "get_policies", "Headers:\n{:#?}", res.headers());
 
     let body = res.text().await?;
-    log::debug!("Body:\n{}", body);
+    log::debug!("Body:\n{body}");
 
     Ok(body)
 }
@@ -44,8 +44,7 @@ pub async fn verify_book_io_policy(policy_id: &str) -> anyhow::Result<()> {
         .into_iter()
         .find(|CollectionItem { collection_id, .. }| collection_id == policy_id)
         .ok_or(anyhow::Error::msg(format!(
-            "Policy ID `{}` does not exist in book.io collection",
-            policy_id
+            "Policy ID `{policy_id}` does not exist in book.io collection"
         )))?;
 
     Ok(())
