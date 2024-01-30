@@ -43,18 +43,16 @@ async fn validate_args(
     }: CliArgs,
 ) -> anyhow::Result<(String, PathBuf, String)> {
     let api_key = api_key
-        .ok_or_else(|| std::env::var(BLOCKFROST_API_KEY).map_err(anyhow::Error::from))
-        .or_else(|_| {
-            let home_dir = std::env::var("HOME")?;
+        .or_else(|| std::env::var(BLOCKFROST_API_KEY).ok())
+        .or_else(|| {
+            let home_dir = std::env::var("HOME").ok()?;
             let blockfrost_key_file = format!("{home_dir}/{BLOCKFROST_KEY_FILE_NAME}");
-            std::fs::read_to_string(blockfrost_key_file).map_err(|_| {
-                anyhow::Error::msg(
-                    "Cannot find Blockfrost API \
-                key in any of the CLI args, environment variable nor home \
-                directory",
-                )
-            })
-        })?;
+            std::fs::read_to_string(blockfrost_key_file).ok()
+        })
+        .ok_or(anyhow::Error::msg(
+            "Cannot find Blockfrost API key in any of the CLI args, environment variable nor home \
+            directory",
+        ))?;
     log::info!("Blockfrost API key: {api_key:?}");
 
     let output = output
