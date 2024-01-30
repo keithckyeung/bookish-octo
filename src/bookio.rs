@@ -34,7 +34,7 @@ async fn get_collections() -> anyhow::Result<String> {
 }
 
 /// Verifies whether the supplied `policy_id` is a book.io policy ID.
-pub async fn verify_book_io_policy(policy_id: &str) -> anyhow::Result<()> {
+pub async fn verify_bookio_policy(policy_id: &str) -> anyhow::Result<()> {
     let collections = get_collections().await?;
 
     let response: CollectionsResponse = serde_json::from_str(&collections)?;

@@ -1,7 +1,7 @@
 use clap::Parser;
 use std::path::PathBuf;
 
-mod policy;
+mod bookio;
 
 const BLOCKFROST_API_KEY: &str = "BLOCKFROST_API_KEY";
 const BLOCKFROST_KEY_FILE_NAME: &str = ".blockfrost";
@@ -62,7 +62,7 @@ async fn validate_args(
         ))?;
     log::info!("Output directory: {output:?}");
 
-    policy::verify_book_io_policy(&policy_id).await?;
+    bookio::verify_bookio_policy(&policy_id).await?;
     println!("Supplied policy ID found in book.io collections!");
 
     Ok((policy_id, output, api_key))
