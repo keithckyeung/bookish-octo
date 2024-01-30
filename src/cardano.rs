@@ -1,4 +1,5 @@
-use blockfrost::{BlockfrostAPI, Order, Pagination};
+use blockfrost::{BlockfrostAPI, Pagination};
+use indicatif::ProgressBar;
 use serde_json::Value;
 use std::{collections::HashSet, path::PathBuf};
 
@@ -20,6 +21,9 @@ pub async fn download_and_store_cover_images(policy_id: String, output: PathBuf,
     log::debug!(target: "cardano", "{asset_ids:?}");
 
     let mut urls = HashSet::new();
+    let pb = ProgressBar::new(MAX_IMAGES as u64);
+
+    println!("Searching for distinct high-res cover image URLs...");
 
     for asset_id in asset_ids {
         let url = match get_image_url(&api, &asset_id).await {
@@ -33,7 +37,9 @@ pub async fn download_and_store_cover_images(policy_id: String, output: PathBuf,
             }
         };
         
-        if !urls.insert(url.clone()) {
+        if urls.insert(url.clone()) {
+            pb.inc(1);
+        } else {
             log::info!(target: "cardano", "Discarding duplicated image URL `{url}`");
         }
 
@@ -41,6 +47,8 @@ pub async fn download_and_store_cover_images(policy_id: String, output: PathBuf,
             break;
         }
     }
+
+    pb.finish_and_clear();
 
     Ok(())
 }
