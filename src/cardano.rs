@@ -37,7 +37,7 @@ pub async fn download_and_store_cover_images(policy_id: String, output: PathBuf,
             log::info!(target: "cardano", "Discarding duplicated image URL `{url}`");
         }
 
-        if urls.len() >= 10 {
+        if urls.len() >= MAX_IMAGES {
             break;
         }
     }
