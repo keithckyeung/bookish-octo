@@ -30,7 +30,4 @@ Options:
   -k, --api-key <API_KEY>  Blockfrost API key to query the Cardano blockchain, if this is not provided, the `BLOCKFROST_API_KEY` environment variable is used, followed by the `.blockfrost` file stored in the user's home directory
   -h, --help               Print help
   -V, --version            Print version
-
 ```
-
-
