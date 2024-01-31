@@ -15,7 +15,8 @@ struct CliArgs {
     policy_id: String,
 
     /// An output directory to store the resulting images. Defaults to current
-    /// directory if none is provided.
+    /// directory if none is provided. Creates the output directory if it did
+    /// not yet exist.
     #[arg(short, long)]
     output: Option<PathBuf>,
 
@@ -50,7 +51,9 @@ async fn validate_args(
         .or_else(|| {
             let home_dir = std::env::var("HOME").ok()?;
             let blockfrost_key_file = format!("{home_dir}/{BLOCKFROST_KEY_FILE_NAME}");
-            std::fs::read_to_string(blockfrost_key_file).map(|s| s.trim().to_string()).ok()
+            std::fs::read_to_string(blockfrost_key_file)
+                .map(|s| s.trim().to_string())
+                .ok()
         })
         .ok_or(anyhow::Error::msg(
             "Cannot find Blockfrost API key in any of the CLI args, environment variable nor home \
@@ -64,7 +67,9 @@ async fn validate_args(
             "Cannot find an appropriate output directory",
         ))?;
     log::info!(target: "main", "Output directory: {output:?}");
+    std::fs::create_dir_all(&output)?;
 
+    println!("Connecting to book.io...");
     bookio::verify_bookio_policy(&policy_id).await?;
     println!("Supplied policy ID found in book.io collections!");
 
