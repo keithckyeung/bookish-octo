@@ -3,7 +3,7 @@ name = "bookish-octo"
 authors = ["Keith Yeung"]
 version = "0.1.0"
 edition = "2021"
-description = "CLI app to download book cover images"
+description = "CLI app to download book.io cover images"
 
 [dependencies]
 anyhow = "1.0.79"
