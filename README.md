@@ -17,7 +17,7 @@ A CLI app to download book.io cover images from Cardano mainnet.
 
 It will then verify that it is a proper book.io policy, after which it will start querying Cardano mainnet via Blockfrost for the URLs of distinct high-res cover images.
 
-Finally, it will concurrently download all 10 distinct images via the public Blockfrost IPFS gateway.
+Finally, it will concurrently download all 10 distinct images via the public Blockfrost IPFS gateway. The downloaded images will be named using their IPFS CID.
 
 ```
 Usage: bookish-octo [OPTIONS] <POLICY_ID>
