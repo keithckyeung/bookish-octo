@@ -13,6 +13,7 @@ const MAX_IMAGES: usize = 10;
 const IPFS_BASE_URL: &str = "http://ipfs.blockfrost.dev/ipfs";
 const MAINNET_BASE_URL: &str = "https://cardano-mainnet.blockfrost.io/api/v0";
 
+/// Response data structure returned by the assets of a specific policy API endpoint
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 struct AssetsPolicyResponse {
@@ -20,6 +21,7 @@ struct AssetsPolicyResponse {
     quantity: String,
 }
 
+/// Response data structure returned by the speicifc asset API endpoint
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 struct SpecificAssetResponse {
@@ -36,6 +38,7 @@ struct SpecificAssetResponse {
     metadata: Option<OffchainMetadata>,
 }
 
+/// Onchain book metadata structure that is maintained by book.io
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 struct BookIoMetadata {
@@ -50,6 +53,7 @@ struct BookIoMetadata {
     website: String,
 }
 
+/// File data structure that appears in the onchain metaadata of book.io assets
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 struct FileData {
@@ -59,6 +63,7 @@ struct FileData {
     src: String,
 }
 
+/// Cardano offchain metadata structure
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 struct OffchainMetadata {
@@ -170,6 +175,7 @@ async fn get_distinct_cover_image_urls(
     Ok(urls)
 }
 
+/// Fetches the high-res cover image listed under the given `asset_id`.
 async fn get_image_url(client: &Client, api_key: &str, asset_id: &str) -> anyhow::Result<String> {
     let asset = client
         .get(format!("{MAINNET_BASE_URL}/assets/{asset_id}"))
@@ -208,6 +214,7 @@ async fn get_image_url(client: &Client, api_key: &str, asset_id: &str) -> anyhow
         ))
 }
 
+/// Fetches the list of PNG image filenames under the `output` directory.
 fn get_filenames_from_output_dir(output: &Path) -> anyhow::Result<HashSet<String>> {
     Ok(std::fs::read_dir(output)?
         .filter_map(|maybe_entry| maybe_entry.ok())
@@ -216,6 +223,8 @@ fn get_filenames_from_output_dir(output: &Path) -> anyhow::Result<HashSet<String
         .collect())
 }
 
+/// Downloads the IPFS with the given `cid`, stores it in an in-memory byte vector and returns it
+/// along with the `cid`.
 async fn download_ipfs_file(cid: String, mp: MultiProgress) -> anyhow::Result<(String, Vec<u8>)> {
     let url = format!("{IPFS_BASE_URL}/{cid}");
     let mut res = reqwest::get(url).await?;
