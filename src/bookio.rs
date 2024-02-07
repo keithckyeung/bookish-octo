@@ -1,26 +1,8 @@
 use reqwest::Client;
-use serde::Deserialize;
 
-const BOOK_IO_COLLECTIONS_API_ENDPOINT: &str = "https://api.book.io/api/v0/collections";
+pub(crate) mod types;
 
-/// Response data structure returned by the book.io collections API endpoint
-#[derive(Deserialize, Debug)]
-#[allow(dead_code)]
-struct CollectionsResponse {
-    #[serde(rename = "type")]
-    type_: String,
-    data: Vec<CollectionItem>,
-}
-
-/// A collection item as it appears in the collections response
-#[derive(Deserialize, Debug)]
-#[allow(dead_code)]
-struct CollectionItem {
-    collection_id: String,
-    description: String,
-    blockchain: String,
-    network: String,
-}
+use types::*;
 
 /// Fetch the collections object from the book.io collections API endpoint
 async fn get_collections(client: &Client) -> anyhow::Result<CollectionsResponse> {

@@ -1,6 +1,5 @@
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use reqwest::Client;
-use serde::Deserialize;
 use std::{
     collections::HashSet,
     fs::File,
@@ -9,71 +8,9 @@ use std::{
 };
 use tokio::task::JoinSet;
 
-const MAX_IMAGES: usize = 10;
-const IPFS_BASE_URL: &str = "http://ipfs.blockfrost.dev/ipfs";
-const MAINNET_BASE_URL: &str = "https://cardano-mainnet.blockfrost.io/api/v0";
+pub(crate) mod types;
 
-/// Response data structure returned by the assets of a specific policy API endpoint
-#[derive(Deserialize, Debug)]
-#[allow(dead_code)]
-struct AssetsPolicyResponse {
-    asset: String,
-    quantity: String,
-}
-
-/// Response data structure returned by the speicifc asset API endpoint
-#[derive(Deserialize, Debug)]
-#[allow(dead_code)]
-struct SpecificAssetResponse {
-    asset: String,
-    policy_id: String,
-    asset_name: Option<String>,
-    fingerprint: String,
-    quantity: String,
-    initial_mint_tx_hash: String,
-    mint_or_burn_count: u32,
-    onchain_metadata: Option<BookIoMetadata>,
-    onchain_metadata_standard: Option<String>,
-    onchain_metadata_extra: Option<String>,
-    metadata: Option<OffchainMetadata>,
-}
-
-/// Onchain book metadata structure that is maintained by book.io
-#[derive(Deserialize, Debug)]
-#[allow(dead_code)]
-struct BookIoMetadata {
-    authors: Vec<String>,
-    data: String,
-    description: Vec<String>,
-    files: Vec<FileData>,
-    id: String,
-    image: String,
-    name: String,
-    sha256: String,
-    website: String,
-}
-
-/// File data structure that appears in the onchain metaadata of book.io assets
-#[derive(Deserialize, Debug)]
-#[allow(dead_code)]
-struct FileData {
-    #[serde(rename = "mediaType")]
-    media_type: String,
-    name: String,
-    src: String,
-}
-
-/// Cardano offchain metadata structure
-#[derive(Deserialize, Debug)]
-#[allow(dead_code)]
-struct OffchainMetadata {
-    name: String,
-    description: String,
-    ticker: String,
-    url: String,
-    logi: String,
-    decimals: u8,
-}
+use types::*;
 
 /// Connects to Cardano mainnet via Blockfrost using the given `api_key`, and
 /// submits a query with the given `policy_id` for a list of assets. Then,
