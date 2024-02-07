@@ -78,13 +78,14 @@ struct OffchainMetadata {
 /// Note that this method is idempotent, i.e. it will not attempt to redownload
 /// images that already exist in the given `output` directory.
 pub async fn download_and_store_cover_images(
+    client: &Client,
     policy_id: String,
     output: PathBuf,
     api_key: String,
 ) -> anyhow::Result<()> {
     println!("Searching for distinct high-res cover image URLs...");
 
-    let urls = get_distinct_cover_image_urls(api_key, policy_id).await?;
+    let urls = get_distinct_cover_image_urls(client, api_key, policy_id).await?;
 
     let fetched_cids: HashSet<String> = urls.iter().map(|url| url.replace("ipfs://", "")).collect();
     let filenames_in_output = get_filenames_from_output_dir(&output)?;
@@ -115,12 +116,12 @@ pub async fn download_and_store_cover_images(
 }
 
 async fn get_distinct_cover_image_urls(
+    client: &Client,
     api_key: String,
     policy_id: String,
 ) -> anyhow::Result<HashSet<String>> {
     let pb = ProgressBar::new(MAX_IMAGES as u64);
     let mut urls = HashSet::new();
-    let client = Client::new();
 
     'paging: for page in 1.. {
         let policies = client
@@ -141,7 +142,7 @@ async fn get_distinct_cover_image_urls(
         log::debug!(target: "cardano", "{asset_ids:?}");
 
         for asset_id in asset_ids {
-            let url = match get_image_url(&client, &api_key, &asset_id).await {
+            let url = match get_image_url(client, &api_key, &asset_id).await {
                 Ok(url) => url,
                 Err(e) => {
                     log::error!(

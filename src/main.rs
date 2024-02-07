@@ -1,4 +1,5 @@
 use clap::Parser;
+use reqwest::Client;
 use std::path::PathBuf;
 
 mod bookio;
@@ -32,14 +33,17 @@ async fn main() -> anyhow::Result<()> {
     let args = CliArgs::parse();
     log::debug!("CLI args: {args:?}");
 
-    let (policy_id, output, api_key) = validate_args(args).await?;
+    let client = Client::new();
 
-    cardano::download_and_store_cover_images(policy_id, output, api_key).await?;
+    let (policy_id, output, api_key) = validate_args(&client, args).await?;
+
+    cardano::download_and_store_cover_images(&client, policy_id, output, api_key).await?;
 
     Ok(())
 }
 
 async fn validate_args(
+    client: &Client,
     CliArgs {
         policy_id,
         output,
@@ -70,7 +74,7 @@ async fn validate_args(
     std::fs::create_dir_all(&output)?;
 
     println!("Connecting to book.io...");
-    bookio::verify_bookio_policy(&policy_id).await?;
+    bookio::verify_bookio_policy(client, &policy_id).await?;
     println!("Supplied policy ID found in book.io collections!");
 
     Ok((policy_id, output, api_key))
