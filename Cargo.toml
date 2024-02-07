@@ -7,11 +7,10 @@ description = "CLI app to download book.io cover images"
 
 [dependencies]
 anyhow = "1.0.79"
-blockfrost = "1.0.1"
 clap = { version = "4.4.18", features = ["derive"] }
 indicatif = "0.17.7"
 log = "0.4.20"
-reqwest = "0.11.23"
+reqwest = { version = "0.11.24", features = ["json"] }
 serde = { version = "1.0.196", features = ["derive"] }
 serde_json = "1.0.113"
 tokio = { version = "1.35.1", features = ["full"] }

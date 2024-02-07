@@ -3,7 +3,7 @@ use serde::Deserialize;
 const BOOK_IO_COLLECTIONS_API_ENDPOINT: &str = "https://api.book.io/api/v0/collections";
 
 /// Response data structure returned by the book.io collections API endpoint
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 struct CollectionsResponse {
     #[serde(rename = "type")]
@@ -12,7 +12,7 @@ struct CollectionsResponse {
 }
 
 /// A collection item as it appears in the collections response
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 struct CollectionItem {
     collection_id: String,

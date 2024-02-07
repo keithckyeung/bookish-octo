@@ -1,6 +1,6 @@
-use blockfrost::{BlockfrostAPI, Pagination};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use serde_json::Value;
+use reqwest::Client;
+use serde::Deserialize;
 use std::{
     collections::HashSet,
     fs::File,
@@ -11,6 +11,64 @@ use tokio::task::JoinSet;
 
 const MAX_IMAGES: usize = 10;
 const IPFS_BASE_URL: &str = "http://ipfs.blockfrost.dev/ipfs";
+const MAINNET_BASE_URL: &str = "https://cardano-mainnet.blockfrost.io/api/v0";
+
+#[derive(Deserialize, Debug)]
+#[allow(dead_code)]
+struct AssetsPolicyResponse {
+    asset: String,
+    quantity: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[allow(dead_code)]
+struct SpecificAssetResponse {
+    asset: String,
+    policy_id: String,
+    asset_name: Option<String>,
+    fingerprint: String,
+    quantity: String,
+    initial_mint_tx_hash: String,
+    mint_or_burn_count: u32,
+    onchain_metadata: Option<BookIoMetadata>,
+    onchain_metadata_standard: Option<String>,
+    onchain_metadata_extra: Option<String>,
+    metadata: Option<OffchainMetadata>,
+}
+
+#[derive(Deserialize, Debug)]
+#[allow(dead_code)]
+struct BookIoMetadata {
+    authors: Vec<String>,
+    data: String,
+    description: Vec<String>,
+    files: Vec<FileData>,
+    id: String,
+    image: String,
+    name: String,
+    sha256: String,
+    website: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[allow(dead_code)]
+struct FileData {
+    #[serde(rename = "mediaType")]
+    media_type: String,
+    name: String,
+    src: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[allow(dead_code)]
+struct OffchainMetadata {
+    name: String,
+    description: String,
+    ticker: String,
+    url: String,
+    logi: String,
+    decimals: u8,
+}
 
 /// Connects to Cardano mainnet via Blockfrost using the given `api_key`, and
 /// submits a query with the given `policy_id` for a list of assets. Then,
@@ -60,38 +118,49 @@ async fn get_distinct_cover_image_urls(
     api_key: String,
     policy_id: String,
 ) -> anyhow::Result<HashSet<String>> {
-    let api = BlockfrostAPI::new(&api_key, Default::default());
-
-    let policies = api
-        .assets_policy_by_id(&policy_id, Pagination::all())
-        .await?;
-    let asset_ids: HashSet<String> = policies.into_iter().map(|policy| policy.asset).collect();
-
-    log::debug!(target: "cardano", "{asset_ids:?}");
-
-    let mut urls = HashSet::new();
     let pb = ProgressBar::new(MAX_IMAGES as u64);
+    let mut urls = HashSet::new();
+    let client = Client::new();
 
-    for asset_id in asset_ids {
-        let url = match get_image_url(&api, &asset_id).await {
-            Ok(url) => url,
-            Err(e) => {
-                log::error!(
-                    target: "cardano",
-                    "Error while fetching metadata for asset: {e}",
-                );
-                continue;
-            }
-        };
+    'paging: for page in 1.. {
+        let policies = client
+            .get(format!("{MAINNET_BASE_URL}/assets/policy/{policy_id}"))
+            .header("project_id", &api_key)
+            .query(&[("page", page)])
+            .send()
+            .await?
+            .json::<Vec<AssetsPolicyResponse>>()
+            .await?;
 
-        if urls.insert(url.clone()) {
-            pb.inc(1);
-        } else {
-            log::info!(target: "cardano", "Discarding duplicated image URL `{url}`");
+        if policies.is_empty() {
+            break 'paging;
         }
 
-        if urls.len() >= MAX_IMAGES {
-            break;
+        let asset_ids: HashSet<String> = policies.into_iter().map(|policy| policy.asset).collect();
+
+        log::debug!(target: "cardano", "{asset_ids:?}");
+
+        for asset_id in asset_ids {
+            let url = match get_image_url(&client, &api_key, &asset_id).await {
+                Ok(url) => url,
+                Err(e) => {
+                    log::error!(
+                        target: "cardano",
+                        "Error while fetching metadata for asset: {e}",
+                    );
+                    continue;
+                }
+            };
+
+            if urls.insert(url.clone()) {
+                pb.inc(1);
+            } else {
+                log::info!(target: "cardano", "Discarding duplicated image URL `{url}`");
+            }
+
+            if urls.len() >= MAX_IMAGES {
+                break 'paging;
+            }
         }
     }
 
@@ -100,44 +169,39 @@ async fn get_distinct_cover_image_urls(
     Ok(urls)
 }
 
-async fn get_image_url(api: &BlockfrostAPI, asset_id: &str) -> anyhow::Result<String> {
-    let asset = api.assets_by_id(&asset_id).await?;
+async fn get_image_url(client: &Client, api_key: &str, asset_id: &str) -> anyhow::Result<String> {
+    let asset = client
+        .get(format!("{MAINNET_BASE_URL}/assets/{asset_id}"))
+        .header("project_id", api_key)
+        .send()
+        .await?
+        .json::<SpecificAssetResponse>()
+        .await?;
+
     let Some(metadata) = asset.onchain_metadata else {
-        return Err(anyhow::Error::msg(format!(
-            "Metadata for asset `{asset_id}` does not exist on chain!"
-        )));
+        return Err(anyhow::Error::msg(
+            "Asset `{asset_id}` does not have any onchain metadata",
+        ));
     };
 
-    let files = metadata
-        .get("files")
-        .and_then(|val| val.as_array())
-        .ok_or(anyhow::Error::msg(
-            "Cannot find `file` key in on chain metadata for asset `{asset_id}`",
-        ))?;
-
-    files
-        .iter()
-        .filter_map(Value::as_object)
-        .filter(|obj| {
-            obj.get("mediaType")
-                .and_then(Value::as_str)
-                .map_or(false, |ty| ty.starts_with("image"))
-        })
-        .find_map(|obj| {
-            let is_hi_res_cover_img = obj
-                .get("name")
-                .and_then(Value::as_str)
-                .map_or(false, |name| {
-                    name.eq_ignore_ascii_case("high-res cover image")
-                });
-            if is_hi_res_cover_img {
-                obj.get("src")
-                    .and_then(Value::as_str)
-                    .map(ToString::to_string)
-            } else {
-                None
-            }
-        })
+    metadata
+        .files
+        .into_iter()
+        .find_map(
+            |FileData {
+                 media_type,
+                 name,
+                 src,
+             }| {
+                if media_type.starts_with("image")
+                    && name.eq_ignore_ascii_case("high-res cover image")
+                {
+                    Some(src)
+                } else {
+                    None
+                }
+            },
+        )
         .ok_or(anyhow::Error::msg(
             "Cannot find a high-res cover image URL for asset `{asset_id}`",
         ))
